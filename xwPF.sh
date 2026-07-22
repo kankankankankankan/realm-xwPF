@@ -16,6 +16,14 @@ GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
 # 模块列表（加载顺序）
 LIB_FILES=("core.sh" "rules.sh" "server.sh" "realm.sh" "ui.sh")
 
+# 按需功能脚本（安装时预下载）
+AUX_FILES=(
+    "xwFailover.sh:/etc/realm/xwFailover.sh"
+    "speedtest.sh:/etc/realm/speedtest.sh"
+    "xw_realm_OCR.sh:/etc/realm/xw_realm_OCR.sh"
+    "port-traffic-dog.sh:/usr/local/bin/port-traffic-dog.sh"
+)
+
 # 颜色
 _RED='\033[0;31m'
 _GREEN='\033[0;32m'
@@ -157,6 +165,24 @@ _bootstrap() {
             echo -e "  ${_GREEN}✓${_NC} lib/$f"
         else
             echo -e "  ${_RED}✗${_NC} lib/$f 下载失败"
+            failed=1
+        fi
+    done
+
+    [ "$failed" -eq 1 ] && return 1
+
+    # 预下载按需功能脚本，后续菜单优先使用本地文件
+    mkdir -p "/etc/realm"
+    local item src target
+    for item in "${AUX_FILES[@]}"; do
+        src="${item%%:*}"
+        target="${item#*:}"
+        mkdir -p "$(dirname "$target")"
+        if _download "$REPO_RAW_URL/$src?$cache_buster" "$target"; then
+            chmod +x "$target"
+            echo -e "  ${_GREEN}✓${_NC} $src"
+        else
+            echo -e "  ${_RED}✗${_NC} $src 预下载失败"
             failed=1
         fi
     done

@@ -9,6 +9,11 @@ download_realm_ocr_script() {
 
     mkdir -p "$(dirname "$target_path")"
 
+    if [ -x "$target_path" ]; then
+        echo -e "${GREEN}✓ 使用本地realm配置识别脚本${NC}"
+        return 0
+    fi
+
     if download_from_sources "$script_url" "$target_path"; then
         chmod +x "$target_path"
         return 0
@@ -626,6 +631,11 @@ download_failover_script() {
 
     mkdir -p "$(dirname "$target_path")"
 
+    if [ -x "$target_path" ]; then
+        echo -e "${GREEN}✓ 使用本地故障转移脚本${NC}"
+        return 0
+    fi
+
     if download_from_sources "$script_url" "$target_path"; then
         chmod +x "$target_path"
         return 0
@@ -644,6 +654,11 @@ download_speedtest_script() {
     echo -e "${GREEN}正在下载最新测速脚本...${NC}"
 
     mkdir -p "$(dirname "$target_path")"
+
+    if [ -x "$target_path" ]; then
+        echo -e "${GREEN}✓ 使用本地测速脚本${NC}"
+        return 0
+    fi
 
     if download_from_sources "$script_url" "$target_path"; then
         chmod +x "$target_path"
