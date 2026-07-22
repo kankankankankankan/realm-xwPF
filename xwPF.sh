@@ -9,7 +9,9 @@ LIB_DIR="$INSTALL_DIR/lib"
 SHORTCUT_PATH="/usr/local/bin/pf"
 
 # 仓库地址
-REPO_RAW_URL="https://github.palees.com/https://raw.githubusercontent.com/zywe03/realm-xwPF/main"
+REPO_RAW_URL="https://raw.githubusercontent.com/zywe03/realm-xwPF/main"
+GITHUB_ACCELERATOR_URL_DEFAULT="https://github.palees.com"
+GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
 
 # 模块列表（加载顺序）
 LIB_FILES=("core.sh" "rules.sh" "server.sh" "realm.sh" "ui.sh")
@@ -21,11 +23,115 @@ _YELLOW='\033[1;33m'
 _BLUE='\033[0;34m'
 _NC='\033[0m'
 
+_init_utf8_locale() {
+    local current_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local candidate
+
+    case "$current_locale" in
+        *UTF-8*|*utf8*|*utf-8*)
+            export LESSCHARSET=utf-8
+            return 0
+            ;;
+    esac
+
+    for candidate in C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+        if locale -a 2>/dev/null | grep -qi "^${candidate}$"; then
+            export LANG="$candidate"
+            export LC_ALL="$candidate"
+            export LC_CTYPE="$candidate"
+            export LESSCHARSET=utf-8
+            return 0
+        fi
+    done
+
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LESSCHARSET=utf-8
+}
+
+_init_utf8_locale
+
 # 下载函数
+_github_accelerated_url() {
+    local url="$1"
+    local base="${GITHUB_ACCELERATOR_URL%/}"
+
+    [ -z "$base" ] && return 1
+
+    case "$url" in
+        https://github.com/*)
+            echo "$base/$url"
+            ;;
+        https://raw.githubusercontent.com/*)
+            local path="${url#https://raw.githubusercontent.com/}"
+            local owner="${path%%/*}"
+            path="${path#*/}"
+            local repo="${path%%/*}"
+            path="${path#*/}"
+            local branch="${path%%/*}"
+            local file_path="${path#*/}"
+            [ -z "$owner" ] || [ -z "$repo" ] || [ -z "$branch" ] || [ -z "$file_path" ] && return 1
+            echo "$base/https://github.com/$owner/$repo/raw/$branch/$file_path"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 _download() {
     local url="$1" target="$2"
-    curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$target" 2>/dev/null ||
-    wget -qO "$target" "$url" 2>/dev/null
+    local accel_url
+
+    if curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$target" 2>/dev/null ||
+       wget -qO "$target" "$url" 2>/dev/null; then
+        return 0
+    fi
+
+    accel_url=$(_github_accelerated_url "$url" 2>/dev/null || true)
+    [ -z "$accel_url" ] && return 1
+
+    curl -fsSL --connect-timeout 10 --max-time 60 "$accel_url" -o "$target" 2>/dev/null ||
+    wget -qO "$target" "$accel_url" 2>/dev/null
+}
+
+_prompt_github_acceleration() {
+    local choice=""
+
+    if [ "${XWPF_GITHUB_ACCELERATION_ASKED:-}" = "1" ]; then
+        return 0
+    fi
+
+    if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
+        echo -e "${_GREEN}已启用 GitHub 加速源: ${GITHUB_ACCELERATOR_URL%/}${_NC}"
+        export GITHUB_ACCELERATOR_URL
+        export XWPF_GITHUB_ACCELERATION_ASKED=1
+        return 0
+    fi
+
+    if [ ! -t 0 ]; then
+        GITHUB_ACCELERATOR_URL="$GITHUB_ACCELERATOR_URL_DEFAULT"
+        echo -e "${_GREEN}已启用 GitHub 加速源: ${GITHUB_ACCELERATOR_URL%/}${_NC}"
+        export GITHUB_ACCELERATOR_URL
+        export XWPF_GITHUB_ACCELERATION_ASKED=1
+        return 0
+    fi
+
+    read -r -p "是否启用国内 GitHub 加速下载？(Y/n) [默认: Y]: " choice
+    case "$choice" in
+        [Nn])
+            GITHUB_ACCELERATOR_URL=""
+            echo -e "${_BLUE}已关闭 GitHub 加速下载${_NC}"
+            ;;
+        *)
+            GITHUB_ACCELERATOR_URL="$GITHUB_ACCELERATOR_URL_DEFAULT"
+            echo -e "${_GREEN}已启用 GitHub 加速源: ${GITHUB_ACCELERATOR_URL%/}${_NC}"
+            ;;
+    esac
+
+    export GITHUB_ACCELERATOR_URL
+    export XWPF_GITHUB_ACCELERATION_ASKED=1
 }
 
 # 安装/更新脚本文件到系统（幂等）
@@ -68,7 +174,11 @@ _bootstrap() {
 _load_libs() {
     if [ ! -d "$LIB_DIR" ] || [ ! -f "$LIB_DIR/core.sh" ]; then
         echo -e "${_RED}错误: 未找到模块目录，请先安装${_NC}"
-        echo -e "${_BLUE}wget -qO- ${REPO_RAW_URL}/xwPF.sh | sudo bash -s install${_NC}"
+        if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
+            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
+        else
+            echo -e "${_BLUE}wget -qO- ${REPO_RAW_URL}/xwPF.sh | sudo bash -s install${_NC}"
+        fi
         return 1
     fi
 
@@ -86,6 +196,7 @@ _load_libs() {
 case "${1:-}" in
     install)
         [ "$(id -u)" -ne 0 ] && { echo -e "${_RED}错误: 需要 root 权限${_NC}"; exit 1; }
+        _prompt_github_acceleration
         _bootstrap || exit 1
         _load_libs || exit 1
         _SKIP_SCRIPT_UPDATE=1 smart_install

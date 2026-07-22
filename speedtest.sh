@@ -2,6 +2,35 @@
 
 # 中转网络链路测试工具
 
+init_utf8_locale() {
+    local current_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local candidate
+
+    case "$current_locale" in
+        *UTF-8*|*utf8*|*utf-8*)
+            export LESSCHARSET=utf-8
+            return 0
+            ;;
+    esac
+
+    for candidate in C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+        if locale -a 2>/dev/null | grep -qi "^${candidate}$"; then
+            export LANG="$candidate"
+            export LC_ALL="$candidate"
+            export LC_CTYPE="$candidate"
+            export LESSCHARSET=utf-8
+            return 0
+        fi
+    done
+
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LESSCHARSET=utf-8
+}
+
+init_utf8_locale
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -45,17 +74,54 @@ cleanup_on_exit() {
 }
 
 # 统一下载函数
+GITHUB_ACCELERATOR_URL_DEFAULT="${GITHUB_ACCELERATOR_URL_DEFAULT:-https://github.palees.com}"
+GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
+
+github_accelerated_url() {
+    local url="$1"
+    local base="${GITHUB_ACCELERATOR_URL%/}"
+
+    [ -z "$base" ] && return 1
+
+    case "$url" in
+        https://github.com/*)
+            echo "$base/$url"
+            ;;
+        https://raw.githubusercontent.com/*)
+            local path="${url#https://raw.githubusercontent.com/}"
+            local owner="${path%%/*}"
+            path="${path#*/}"
+            local repo="${path%%/*}"
+            path="${path#*/}"
+            local branch="${path%%/*}"
+            local file_path="${path#*/}"
+            [ -z "$owner" ] || [ -z "$repo" ] || [ -z "$branch" ] || [ -z "$file_path" ] && return 1
+            echo "$base/https://github.com/$owner/$repo/raw/$branch/$file_path"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 download_from_sources() {
     local url="$1"
     local target_path="$2"
+    local accel_url=""
 
     if curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$url" -o "$target_path"; then
         echo -e "${GREEN}✓ 下载成功${NC}" >&2
         return 0
-    else
-        echo -e "${RED}✗ 下载失败${NC}" >&2
-        return 1
     fi
+
+    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
+    if [ -n "$accel_url" ] && curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" -o "$target_path"; then
+        echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
+        return 0
+    fi
+
+    echo -e "${RED}✗ 下载失败${NC}" >&2
+    return 1
 }
 
 # 全局测试结果数据结构

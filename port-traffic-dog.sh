@@ -10,6 +10,35 @@ readonly CONFIG_FILE="$CONFIG_DIR/config.json"
 readonly LOG_FILE="$CONFIG_DIR/logs/traffic.log"
 readonly TRAFFIC_DATA_FILE="$CONFIG_DIR/traffic_data.json"
 
+init_utf8_locale() {
+    local current_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local candidate
+
+    case "$current_locale" in
+        *UTF-8*|*utf8*|*utf-8*)
+            export LESSCHARSET=utf-8
+            return 0
+            ;;
+    esac
+
+    for candidate in C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+        if locale -a 2>/dev/null | grep -qi "^${candidate}$"; then
+            export LANG="$candidate"
+            export LC_ALL="$candidate"
+            export LC_CTYPE="$candidate"
+            export LESSCHARSET=utf-8
+            return 0
+        fi
+    done
+
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LESSCHARSET=utf-8
+}
+
+init_utf8_locale
+
 readonly RED='\033[0;31m'
 readonly YELLOW='\033[0;33m'
 readonly BLUE='\033[0;34m'
@@ -20,6 +49,8 @@ readonly SHORT_CONNECT_TIMEOUT=5
 readonly SHORT_MAX_TIMEOUT=7
 readonly SCRIPT_URL="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/port-traffic-dog.sh"
 readonly SHORTCUT_COMMAND="dog"
+GITHUB_ACCELERATOR_URL_DEFAULT="${GITHUB_ACCELERATOR_URL_DEFAULT:-https://github.palees.com}"
+GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
 
 detect_system() {
     # Ubuntu优先检测：避免Debian系统误判
@@ -2342,13 +2373,49 @@ import_config() {
 }
 
 # 统一下载函数
+github_accelerated_url() {
+    local url=$1
+    local base="${GITHUB_ACCELERATOR_URL%/}"
+
+    [ -z "$base" ] && return 1
+
+    case "$url" in
+        https://github.com/*)
+            echo "$base/$url"
+            ;;
+        https://raw.githubusercontent.com/*)
+            local path="${url#https://raw.githubusercontent.com/}"
+            local owner="${path%%/*}"
+            path="${path#*/}"
+            local repo="${path%%/*}"
+            path="${path#*/}"
+            local branch="${path%%/*}"
+            local file_path="${path#*/}"
+            [ -z "$owner" ] || [ -z "$repo" ] || [ -z "$branch" ] || [ -z "$file_path" ] && return 1
+            echo "$base/https://github.com/$owner/$repo/raw/$branch/$file_path"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
 download_with_sources() {
     local url=$1
     local output_file=$2
+    local accel_url=""
 
     if curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$url" -o "$output_file" 2>/dev/null; then
         if [ -s "$output_file" ]; then
             echo -e "${GREEN}下载成功${NC}"
+            return 0
+        fi
+    fi
+
+    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
+    if [ -n "$accel_url" ] && curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" -o "$output_file" 2>/dev/null; then
+        if [ -s "$output_file" ]; then
+            echo -e "${GREEN}加速下载成功${NC}"
             return 0
         fi
     fi

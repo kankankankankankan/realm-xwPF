@@ -2,6 +2,8 @@
 
 SCRIPT_VERSION="v2.2.2"
 REALM_VERSION="v2.9.4"
+GITHUB_ACCELERATOR_URL_DEFAULT="${GITHUB_ACCELERATOR_URL_DEFAULT:-https://github.palees.com}"
+GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
 
 NAT_LISTEN_PORT=""
 NAT_LISTEN_IP=""
@@ -27,6 +29,35 @@ REQUIRED_TOOLS=("curl" "wget" "tar" "grep" "cut" "bc" "jq")
 DISTRO=""        # debian | alpine | centos
 PKG_MGR=""       # apt-get | apk | yum/dnf
 INIT_SYSTEM=""   # systemd | openrc
+
+init_utf8_locale() {
+    local current_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local candidate
+
+    case "$current_locale" in
+        *UTF-8*|*utf8*|*utf-8*)
+            export LESSCHARSET=utf-8
+            return 0
+            ;;
+    esac
+
+    for candidate in C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+        if locale -a 2>/dev/null | grep -qi "^${candidate}$"; then
+            export LANG="$candidate"
+            export LC_ALL="$candidate"
+            export LC_CTYPE="$candidate"
+            export LESSCHARSET=utf-8
+            return 0
+        fi
+    done
+
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LESSCHARSET=utf-8
+}
+
+init_utf8_locale
 
 # 通用的字段初始化函数
 init_rule_field() {
@@ -84,6 +115,33 @@ DEFAULT_SNI_DOMAIN="www.tesla.com"
 # 网络超时配置
 SHORT_CONNECT_TIMEOUT=5
 SHORT_MAX_TIMEOUT=7
+
+github_accelerated_url() {
+    local url="$1"
+    local base="${GITHUB_ACCELERATOR_URL%/}"
+
+    [ -z "$base" ] && return 1
+
+    case "$url" in
+        https://github.com/*)
+            echo "$base/$url"
+            ;;
+        https://raw.githubusercontent.com/*)
+            local path="${url#https://raw.githubusercontent.com/}"
+            local owner="${path%%/*}"
+            path="${path#*/}"
+            local repo="${path%%/*}"
+            path="${path#*/}"
+            local branch="${path%%/*}"
+            local file_path="${path#*/}"
+            [ -z "$owner" ] || [ -z "$repo" ] || [ -z "$branch" ] || [ -z "$file_path" ] && return 1
+            echo "$base/https://github.com/$owner/$repo/raw/$branch/$file_path"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
 
 # 生成network配置
 generate_network_config() {
@@ -207,7 +265,11 @@ manage_dependencies() {
         if [ "$mode" = "check" ]; then
             echo -e "${RED}错误: 缺少必备工具: ${missing_tools[*]}${NC}"
             echo -e "${YELLOW}请先选择菜单选项1进行安装，或手动运行安装命令:${NC}"
-            echo -e "${BLUE}curl -fsSL https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install${NC}"
+            if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
+                echo -e "${BLUE}curl -fsSL ${GITHUB_ACCELERATOR_URL%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${NC}"
+            else
+                echo -e "${BLUE}curl -fsSL https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install${NC}"
+            fi
             exit 1
         elif [ "$mode" = "install" ]; then
             echo -e "${YELLOW}需要安装以下工具: ${missing_tools[*]}${NC}"

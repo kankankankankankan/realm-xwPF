@@ -88,9 +88,9 @@ wget -qO- https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sud
 ### Behind a Restricted Network? Use an Accelerated Mirror
 
 ```bash
-wget -qO- https://v6.gh-proxy.org/https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install
+wget -qO- https://github.palees.com/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install
 ```
-If the mirror is down, retry a few times or switch to another proxy with built-in acceleration.
+The installer asks whether to enable GitHub acceleration at startup. It is enabled by default. If the mirror is down, retry a few times or set `GITHUB_ACCELERATOR_URL` to another proxy with built-in acceleration.
 
 ## Offline Installation (No Internet Access)
 

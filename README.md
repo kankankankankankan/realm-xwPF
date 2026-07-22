@@ -88,9 +88,9 @@ wget -qO- https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sud
 ### 网络受限使用加速源,一键安装
 
 ```bash
-wget -qO- https://v6.gh-proxy.org/https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install
+wget -qO- https://github.palees.com/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install
 ```
-若加速源失效，可多次重试或更换其他具有内置加速功能的代理源
+安装开始时会询问是否启用国内 GitHub 加速下载，默认启用。脚本内部下载 GitHub 文件时会先尝试原地址，失败后自动使用加速源。需要更换加速源时可设置 `GITHUB_ACCELERATOR_URL` 环境变量。
 
 ## 无法联网的离线安装
 

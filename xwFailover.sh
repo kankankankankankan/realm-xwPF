@@ -2,6 +2,35 @@
 
 # 故障转移管理脚本
 
+init_utf8_locale() {
+    local current_locale="${LC_ALL:-${LC_CTYPE:-${LANG:-}}}"
+    local candidate
+
+    case "$current_locale" in
+        *UTF-8*|*utf8*|*utf-8*)
+            export LESSCHARSET=utf-8
+            return 0
+            ;;
+    esac
+
+    for candidate in C.UTF-8 en_US.UTF-8 zh_CN.UTF-8; do
+        if locale -a 2>/dev/null | grep -qi "^${candidate}$"; then
+            export LANG="$candidate"
+            export LC_ALL="$candidate"
+            export LC_CTYPE="$candidate"
+            export LESSCHARSET=utf-8
+            return 0
+        fi
+    done
+
+    export LANG=C.UTF-8
+    export LC_ALL=C.UTF-8
+    export LC_CTYPE=C.UTF-8
+    export LESSCHARSET=utf-8
+}
+
+init_utf8_locale
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'

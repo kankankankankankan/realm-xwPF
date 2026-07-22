@@ -71,14 +71,21 @@ detect_virtualization() {
 download_from_sources() {
     local url="$1"
     local target_path="$2"
+    local accel_url=""
 
     if curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$url" -o "$target_path"; then
         echo -e "${GREEN}✓ 下载成功${NC}" >&2
         return 0
-    else
-        echo -e "${RED}✗ 下载失败${NC}" >&2
-        return 1
     fi
+
+    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
+    if [ -n "$accel_url" ] && curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" -o "$target_path"; then
+        echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
+        return 0
+    fi
+
+    echo -e "${RED}✗ 下载失败${NC}" >&2
+    return 1
 }
 
 
@@ -86,7 +93,15 @@ download_from_sources() {
 get_latest_realm_version() {
     echo -e "${YELLOW}获取最新版本信息...${NC}" >&2
 
-    local latest_version=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "https://github.com/zhboner/realm/releases" 2>/dev/null | \
+    local releases_url="https://github.com/zhboner/realm/releases"
+    local releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$releases_url" 2>/dev/null)
+
+    if [ -z "$releases_html" ]; then
+        local accel_url=$(github_accelerated_url "$releases_url" 2>/dev/null || true)
+        [ -n "$accel_url" ] && releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" 2>/dev/null)
+    fi
+
+    local latest_version=$(echo "$releases_html" | \
         head -2100 | \
         sed -n 's|.*releases/tag/v\([0-9.]*\).*|v\1|p' | head -1)
 
