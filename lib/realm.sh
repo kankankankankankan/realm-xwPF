@@ -72,18 +72,45 @@ download_from_sources() {
     local url="$1"
     local target_path="$2"
     local accel_url=""
+    local connect_timeout="$SHORT_CONNECT_TIMEOUT"
+    local max_timeout="$SHORT_MAX_TIMEOUT"
 
-    if curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$url" -o "$target_path"; then
+    case "$url" in
+        https://github.com/*/releases/download/*)
+            connect_timeout=15
+            max_timeout=180
+            ;;
+    esac
+
+    rm -f "$target_path"
+    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
+
+    if [ -n "$accel_url" ]; then
+        if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$accel_url" -o "$target_path" && [ -s "$target_path" ]; then
+            echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
+            return 0
+        fi
+
+        rm -f "$target_path"
+        if wget -q --timeout="$connect_timeout" --tries=2 -O "$target_path" "$accel_url" 2>/dev/null && [ -s "$target_path" ]; then
+            echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
+            return 0
+        fi
+    fi
+
+    rm -f "$target_path"
+    if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$url" -o "$target_path" && [ -s "$target_path" ]; then
         echo -e "${GREEN}✓ 下载成功${NC}" >&2
         return 0
     fi
 
-    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
-    if [ -n "$accel_url" ] && curl -fsSL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" -o "$target_path"; then
-        echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
+    rm -f "$target_path"
+    if wget -q --timeout="$connect_timeout" --tries=2 -O "$target_path" "$url" 2>/dev/null && [ -s "$target_path" ]; then
+        echo -e "${GREEN}✓ 下载成功${NC}" >&2
         return 0
     fi
 
+    rm -f "$target_path"
     echo -e "${RED}✗ 下载失败${NC}" >&2
     return 1
 }
@@ -94,11 +121,12 @@ get_latest_realm_version() {
     echo -e "${YELLOW}获取最新版本信息...${NC}" >&2
 
     local releases_url="https://github.com/zhboner/realm/releases"
-    local releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$releases_url" 2>/dev/null)
+    local accel_url=$(github_accelerated_url "$releases_url" 2>/dev/null || true)
+    local fetch_url="${accel_url:-$releases_url}"
+    local releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$fetch_url" 2>/dev/null)
 
-    if [ -z "$releases_html" ]; then
-        local accel_url=$(github_accelerated_url "$releases_url" 2>/dev/null || true)
-        [ -n "$accel_url" ] && releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" 2>/dev/null)
+    if [ -z "$releases_html" ] && [ "$fetch_url" != "$releases_url" ]; then
+        releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$releases_url" 2>/dev/null)
     fi
 
     local latest_version=$(echo "$releases_html" | \

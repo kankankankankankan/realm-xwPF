@@ -84,16 +84,16 @@ _download() {
     local url="$1" target="$2"
     local accel_url
 
-    if curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$target" 2>/dev/null ||
-       wget -qO "$target" "$url" 2>/dev/null; then
-        return 0
+    accel_url=$(_github_accelerated_url "$url" 2>/dev/null || true)
+    if [ -n "$accel_url" ]; then
+        if curl -fsSL --connect-timeout 10 --max-time 60 "$accel_url" -o "$target" 2>/dev/null ||
+           wget -qO "$target" "$accel_url" 2>/dev/null; then
+            return 0
+        fi
     fi
 
-    accel_url=$(_github_accelerated_url "$url" 2>/dev/null || true)
-    [ -z "$accel_url" ] && return 1
-
-    curl -fsSL --connect-timeout 10 --max-time 60 "$accel_url" -o "$target" 2>/dev/null ||
-    wget -qO "$target" "$accel_url" 2>/dev/null
+    curl -fsSL --connect-timeout 10 --max-time 60 "$url" -o "$target" 2>/dev/null ||
+    wget -qO "$target" "$url" 2>/dev/null
 }
 
 _prompt_github_acceleration() {

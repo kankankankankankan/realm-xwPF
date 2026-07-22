@@ -2404,22 +2404,45 @@ download_with_sources() {
     local url=$1
     local output_file=$2
     local accel_url=""
+    local connect_timeout="$SHORT_CONNECT_TIMEOUT"
+    local max_timeout="$SHORT_MAX_TIMEOUT"
 
-    if curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$url" -o "$output_file" 2>/dev/null; then
-        if [ -s "$output_file" ]; then
-            echo -e "${GREEN}下载成功${NC}"
+    case "$url" in
+        https://github.com/*/releases/download/*)
+            connect_timeout=15
+            max_timeout=180
+            ;;
+    esac
+
+    rm -f "$output_file"
+    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
+
+    if [ -n "$accel_url" ]; then
+        if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$accel_url" -o "$output_file" 2>/dev/null && [ -s "$output_file" ]; then
+            echo -e "${GREEN}加速下载成功${NC}"
             return 0
         fi
-    fi
 
-    accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
-    if [ -n "$accel_url" ] && curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$accel_url" -o "$output_file" 2>/dev/null; then
-        if [ -s "$output_file" ]; then
+        rm -f "$output_file"
+        if wget -q --timeout="$connect_timeout" --tries=2 -O "$output_file" "$accel_url" 2>/dev/null && [ -s "$output_file" ]; then
             echo -e "${GREEN}加速下载成功${NC}"
             return 0
         fi
     fi
 
+    rm -f "$output_file"
+    if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$url" -o "$output_file" 2>/dev/null && [ -s "$output_file" ]; then
+        echo -e "${GREEN}下载成功${NC}"
+        return 0
+    fi
+
+    rm -f "$output_file"
+    if wget -q --timeout="$connect_timeout" --tries=2 -O "$output_file" "$url" 2>/dev/null && [ -s "$output_file" ]; then
+        echo -e "${GREEN}下载成功${NC}"
+        return 0
+    fi
+
+    rm -f "$output_file"
     echo -e "${RED}下载失败${NC}"
     return 1
 }
