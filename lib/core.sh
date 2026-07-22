@@ -23,7 +23,7 @@ WS_HOST=""
 RULE_ID=""
 RULE_NAME=""
 
-REQUIRED_TOOLS=("curl" "wget" "tar" "grep" "cut" "bc" "jq")
+REQUIRED_TOOLS=("curl" "wget" "tar" "grep" "cut" "bc" "jq" "nc")
 
 # 系统标识（由 detect_system 设置）
 DISTRO=""        # debian | alpine | centos
@@ -229,22 +229,52 @@ detect_system() {
     fi
 }
 
+# 获取命令对应的软件包名
+_pkg_name_for_tool() {
+    local tool="$1"
+
+    case "$tool" in
+        nc)
+            case "$DISTRO" in
+                debian|alpine)
+                    echo "netcat-openbsd" ;;
+                centos)
+                    echo "nmap-ncat" ;;
+                *)
+                    echo "nc" ;;
+            esac
+            ;;
+        *)
+            echo "$tool" ;;
+    esac
+}
+
 # 统一包安装分发
 _pkg_install() {
+    local tool package
+
     case "$PKG_MGR" in
         apt-get)
-            apt-get update -qq >/dev/null 2>&1
-            apt-get install -y "$@" >/dev/null 2>&1 ;;
-        apk)
-            apk add --no-cache "$@" >/dev/null 2>&1 ;;
-        yum|dnf)
-            $PKG_MGR install -y "$@" >/dev/null 2>&1 ;;
+            apt-get update -qq >/dev/null 2>&1 ;;
     esac
+
     for tool in "$@"; do
+        package=$(_pkg_name_for_tool "$tool")
+
+        case "$PKG_MGR" in
+            apt-get)
+                DEBIAN_FRONTEND=noninteractive apt-get install -y "$package" >/dev/null 2>&1 ;;
+            apk)
+                apk add --no-cache "$package" >/dev/null 2>&1 ;;
+            yum|dnf)
+                $PKG_MGR install -y "$package" >/dev/null 2>&1 ;;
+        esac
+
         if command -v "$tool" >/dev/null 2>&1; then
             echo -e "${GREEN}✓${NC} $tool 安装成功"
         else
             echo -e "${RED}✗${NC} $tool 安装失败"
+            [ "$tool" = "nc" ] && echo -e "${YELLOW}请手动安装 netcat-openbsd 或 nmap-ncat${NC}"
         fi
     done
 }

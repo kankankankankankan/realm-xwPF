@@ -117,21 +117,40 @@ download_from_sources() {
 
 
 # 获取realm最新版本号
+extract_realm_version() {
+    sed -n 's|.*releases/tag/\(v[0-9][0-9.]*\).*|\1|p' | head -1
+}
+
 get_latest_realm_version() {
     echo -e "${YELLOW}获取最新版本信息...${NC}" >&2
 
     local releases_url="https://github.com/zhboner/realm/releases"
-    local accel_url=$(github_accelerated_url "$releases_url" 2>/dev/null || true)
-    local fetch_url="${accel_url:-$releases_url}"
-    local releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$fetch_url" 2>/dev/null)
+    local latest_url="https://github.com/zhboner/realm/releases/latest"
+    local accel_latest_url=$(github_accelerated_url "$latest_url" 2>/dev/null || true)
+    local accel_releases_url=$(github_accelerated_url "$releases_url" 2>/dev/null || true)
+    local fetch_latest_url="${accel_latest_url:-$latest_url}"
+    local latest_headers=""
+    local releases_html=""
+    local latest_version=""
 
-    if [ -z "$releases_html" ] && [ "$fetch_url" != "$releases_url" ]; then
-        releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$releases_url" 2>/dev/null)
+    latest_headers=$(curl -fsSLI --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$fetch_latest_url" 2>/dev/null || true)
+    latest_version=$(echo "$latest_headers" | extract_realm_version)
+
+    if [ -z "$latest_version" ] && [ "$fetch_latest_url" != "$latest_url" ]; then
+        latest_headers=$(curl -fsSLI --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$latest_url" 2>/dev/null || true)
+        latest_version=$(echo "$latest_headers" | extract_realm_version)
     fi
 
-    local latest_version=$(echo "$releases_html" | \
-        head -2100 | \
-        sed -n 's|.*releases/tag/v\([0-9.]*\).*|v\1|p' | head -1)
+    if [ -z "$latest_version" ]; then
+        local fetch_releases_url="${accel_releases_url:-$releases_url}"
+        releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$fetch_releases_url" 2>/dev/null)
+        latest_version=$(echo "$releases_html" | head -2100 | extract_realm_version)
+    fi
+
+    if [ -z "$latest_version" ] && [ -n "$accel_releases_url" ]; then
+        releases_html=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$releases_url" 2>/dev/null)
+        latest_version=$(echo "$releases_html" | head -2100 | extract_realm_version)
+    fi
 
     if [ -z "$latest_version" ]; then
         echo -e "${YELLOW}使用当前最新版本 ${REALM_VERSION}${NC}" >&2
@@ -296,6 +315,8 @@ install_realm() {
 
         DOWNLOAD_URL="https://github.com/zhboner/realm/releases/download/${LATEST_VERSION}/realm-${ARCH}.tar.gz"
         echo -e "${BLUE}目标文件: realm-${ARCH}.tar.gz${NC}"
+        local accel_download_url=$(github_accelerated_url "$DOWNLOAD_URL" 2>/dev/null || true)
+        [ -n "$accel_download_url" ] && echo -e "${BLUE}加速下载: ${accel_download_url}${NC}"
 
         local file_path="$(pwd)/realm.tar.gz"
         if download_from_sources "$DOWNLOAD_URL" "$file_path"; then
