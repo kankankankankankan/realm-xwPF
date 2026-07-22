@@ -139,9 +139,10 @@ _bootstrap() {
     echo -e "${_YELLOW}正在安装/更新脚本文件...${_NC}"
 
     mkdir -p "$LIB_DIR"
+    local cache_buster="t=$(date +%s)"
 
     # 下载入口脚本
-    if _download "$REPO_RAW_URL/xwPF.sh" "$INSTALL_DIR/xwPF.sh"; then
+    if _download "$REPO_RAW_URL/xwPF.sh?$cache_buster" "$INSTALL_DIR/xwPF.sh"; then
         chmod +x "$INSTALL_DIR/xwPF.sh"
         echo -e "  ${_GREEN}✓${_NC} xwPF.sh"
     else
@@ -152,7 +153,7 @@ _bootstrap() {
     # 下载所有模块
     local failed=0
     for f in "${LIB_FILES[@]}"; do
-        if _download "$REPO_RAW_URL/lib/$f" "$LIB_DIR/$f"; then
+        if _download "$REPO_RAW_URL/lib/$f?$cache_buster" "$LIB_DIR/$f"; then
             echo -e "  ${_GREEN}✓${_NC} lib/$f"
         else
             echo -e "  ${_RED}✗${_NC} lib/$f 下载失败"
