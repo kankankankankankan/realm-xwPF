@@ -80,13 +80,17 @@ download_from_sources() {
             connect_timeout=15
             max_timeout=180
             ;;
+        https://github.com/*|https://raw.githubusercontent.com/*)
+            connect_timeout=15
+            max_timeout=60
+            ;;
     esac
 
     rm -f "$target_path"
     accel_url=$(github_accelerated_url "$url" 2>/dev/null || true)
 
     if [ -n "$accel_url" ]; then
-        if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$accel_url" -o "$target_path" && [ -s "$target_path" ]; then
+        if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$accel_url" -o "$target_path" 2>/dev/null && [ -s "$target_path" ]; then
             echo -e "${GREEN}✓ 加速下载成功${NC}" >&2
             return 0
         fi
@@ -99,7 +103,7 @@ download_from_sources() {
     fi
 
     rm -f "$target_path"
-    if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$url" -o "$target_path" && [ -s "$target_path" ]; then
+    if curl -fsSL --connect-timeout "$connect_timeout" --max-time "$max_timeout" "$url" -o "$target_path" 2>/dev/null && [ -s "$target_path" ]; then
         echo -e "${GREEN}✓ 下载成功${NC}" >&2
         return 0
     fi

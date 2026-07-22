@@ -3,6 +3,7 @@
 download_realm_ocr_script() {
     local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xw_realm_OCR.sh"
     local target_path="/etc/realm/xw_realm_OCR.sh"
+    script_url="${script_url}?t=$(date +%s)"
 
     echo -e "${GREEN}正在下载最新realm配置识别脚本...${NC}"
 
@@ -619,6 +620,7 @@ get_gmt8_time() {
 download_failover_script() {
     local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwFailover.sh"
     local target_path="/etc/realm/xwFailover.sh"
+    script_url="${script_url}?t=$(date +%s)"
 
     echo -e "${GREEN}正在下载最新故障转移脚本...${NC}"
 
@@ -637,6 +639,7 @@ download_failover_script() {
 download_speedtest_script() {
     local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/speedtest.sh"
     local target_path="/etc/realm/speedtest.sh"
+    script_url="${script_url}?t=$(date +%s)"
 
     echo -e "${GREEN}正在下载最新测速脚本...${NC}"
 
@@ -686,6 +689,7 @@ failover_management_menu() {
 port_traffic_dog_menu() {
     local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/port-traffic-dog.sh"
     local dog_script="/usr/local/bin/port-traffic-dog.sh"
+    script_url="${script_url}?t=$(date +%s)"
 
     # 脚本不存在或不可执行时才下载
     if [[ ! -f "$dog_script" || ! -x "$dog_script" ]]; then
