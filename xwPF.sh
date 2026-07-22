@@ -177,7 +177,7 @@ _load_libs() {
         if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
             echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
         else
-            echo -e "${_BLUE}wget -qO- ${REPO_RAW_URL}/xwPF.sh | sudo bash -s install${_NC}"
+            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL_DEFAULT%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
         fi
         return 1
     fi
@@ -191,6 +191,10 @@ _load_libs() {
         fi
     done
 }
+
+if [ "${1:-}" = "-s" ] && [ "${2:-}" = "install" ]; then
+    shift
+fi
 
 # 主入口
 case "${1:-}" in
