@@ -193,6 +193,15 @@ _load_libs() {
     done
 }
 
+_require_interactive_tty() {
+    if [ ! -t 0 ]; then
+        echo -e "${_RED}错误: 当前不是交互终端，无法打开菜单${_NC}"
+        echo -e "${_BLUE}安装请使用:${_NC}"
+        echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL_DEFAULT%/}/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
+        return 1
+    fi
+}
+
 if [ "${1:-}" = "-s" ] && [ "${2:-}" = "install" ]; then
     shift
 fi
@@ -207,6 +216,7 @@ case "${1:-}" in
         _SKIP_SCRIPT_UPDATE=1 smart_install
         ;;
     *)
+        _require_interactive_tty || exit 1
         _load_libs || exit 1
         main "$@"
         ;;
