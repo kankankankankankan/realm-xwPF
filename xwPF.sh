@@ -9,7 +9,7 @@ LIB_DIR="$INSTALL_DIR/lib"
 SHORTCUT_PATH="/usr/local/bin/pf"
 
 # 仓库地址
-REPO_RAW_URL="https://raw.githubusercontent.com/zywe03/realm-xwPF/main"
+REPO_RAW_URL="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main"
 GITHUB_ACCELERATOR_URL_DEFAULT="https://github.palees.com"
 GITHUB_ACCELERATOR_URL="${GITHUB_ACCELERATOR_URL-}"
 
@@ -175,9 +175,9 @@ _load_libs() {
     if [ ! -d "$LIB_DIR" ] || [ ! -f "$LIB_DIR/core.sh" ]; then
         echo -e "${_RED}错误: 未找到模块目录，请先安装${_NC}"
         if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
-            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
+            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL%/}/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
         else
-            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL_DEFAULT%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
+            echo -e "${_BLUE}wget -qO- ${GITHUB_ACCELERATOR_URL_DEFAULT%/}/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${_NC}"
         fi
         return 1
     fi

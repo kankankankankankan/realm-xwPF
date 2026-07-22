@@ -72,7 +72,7 @@ DTAG
  ⬇️ UDP下行 │ 10.0 Mbps (1.2 MB/s)      │ 0/26335 (0%)              │ 0.040 ms                 
 
 ─────────────────────────────────────────────────────────────────
-测试完成时间: 2025-08-28 20:12:29 | 脚本开源地址：https://github.com/zywe03/realm-xwPF
+测试完成时间: 2025-08-28 20:12:29 | 脚本开源地址：https://github.com/kankankankankankan/realm-xwPF
 ```
 
 </details>
@@ -82,13 +82,13 @@ DTAG
 ### 一键安装
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install
+wget -qO- https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwPF.sh | sudo bash -s install
 ```
 
 ### 网络受限使用加速源,一键安装
 
 ```bash
-wget -qO- https://github.palees.com/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install
+wget -qO- https://github.palees.com/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install
 ```
 安装开始时会询问是否启用国内 GitHub 加速下载，默认启用。脚本内部下载 GitHub 文件时会先尝试原地址，失败后自动使用加速源。需要更换加速源时可设置 `GITHUB_ACCELERATOR_URL` 环境变量。
 
@@ -101,8 +101,8 @@ wget -qO- https://github.palees.com/https://github.com/zywe03/realm-xwPF/raw/mai
 
 **1. 在有网络的设备上下载以下文件**
 
-- **主脚本**：[xwPF.sh](https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh)
-- **模块文件**（全部需要）：https://github.com/zywe03/realm-xwPF/tree/main/lib
+- **主脚本**：[xwPF.sh](https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh)
+- **模块文件**（全部需要）：https://github.com/kankankankankankan/realm-xwPF/tree/main/lib
 
 - **Realm 程序**（根据系统架构选择）：
 
@@ -375,11 +375,11 @@ MPTCP（启用MPTCP时创建）
 
 - **其他开源项目：** [https://github.com/zywe03](https://github.com/zywe03)
 - **介绍主页：** [https://zywe.de](https://zywe.de)
-- **问题反馈：** [GitHub Issues](https://github.com/zywe03/realm-xwPF/issues)
+- **问题反馈：** [GitHub Issues](https://github.com/kankankankankankan/realm-xwPF/issues)
 - **纯闲聊群** [tg交流群](https://t.me/zywe_chat) 
 
 ---
 
 **⭐ 如果这个项目对您有帮助，请给个 Star 支持一下！**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=zywe03/realm-xwPF&type=Date)](https://www.star-history.com/#zywe03/realm-xwPF&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=kankankankankankan/realm-xwPF&type=Date)](https://www.star-history.com/#kankankankankankan/realm-xwPF&Date)

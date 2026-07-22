@@ -296,9 +296,9 @@ manage_dependencies() {
             echo -e "${RED}错误: 缺少必备工具: ${missing_tools[*]}${NC}"
             echo -e "${YELLOW}请先选择菜单选项1进行安装，或手动运行安装命令:${NC}"
             if [ -n "$GITHUB_ACCELERATOR_URL" ]; then
-                echo -e "${BLUE}curl -fsSL ${GITHUB_ACCELERATOR_URL%/}/https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${NC}"
+                echo -e "${BLUE}curl -fsSL ${GITHUB_ACCELERATOR_URL%/}/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install${NC}"
             else
-                echo -e "${BLUE}curl -fsSL https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install${NC}"
+                echo -e "${BLUE}curl -fsSL https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwPF.sh | sudo bash -s install${NC}"
             fi
             exit 1
         elif [ "$mode" = "install" ]; then
