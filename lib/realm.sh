@@ -917,7 +917,10 @@ smart_install() {
     # 脚本更新（首次安装跳过，菜单进入则询问）
     if [ "${_SKIP_SCRIPT_UPDATE:-}" != "1" ]; then
         read -p "是否更新脚本？(y/N): " update_script
-        [[ "$update_script" =~ ^[Yy]$ ]] && _bootstrap
+        if [[ "$update_script" =~ ^[Yy]$ ]]; then
+            _bootstrap || return 1
+            _load_libs || return 1
+        fi
     fi
 
     # 下载最新的 realm 主程序
