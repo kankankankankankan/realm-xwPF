@@ -2332,26 +2332,54 @@ weight_management_menu() {
         echo ""
         echo -e "${GRAY}注意: 只有多个目标服务器的规则组才需要权重配置${NC}"
         echo ""
+        echo -e "${BLUE}操作提示: 输入单个编号配置一组，输入 1,3,5-12 批量配置，输入 all 配置全部${NC}"
         read -p "请输入规则编号 [1-${#rule_ports[@]}] (或按回车返回): " selected_number
 
         if [ -z "$selected_number" ]; then
             break
         fi
 
-        # 验证数字输入
-        if ! [[ "$selected_number" =~ ^[0-9]+$ ]] || [ "$selected_number" -lt 1 ] || [ "$selected_number" -gt ${#rule_ports[@]} ]; then
-            echo -e "${RED}无效的规则编号${NC}"
-            read -p "按回车键继续..."
-            continue
+        local selections=()
+        if [ "$selected_number" = "all" ]; then
+            for ((i=1; i<=${#rule_ports[@]}; i++)); do selections+=("$i"); done
+        else
+            IFS=',' read -ra parts <<< "$selected_number"
+            for part in "${parts[@]}"; do
+                if [[ "$part" =~ ^([0-9]+)-([0-9]+)$ ]]; then
+                    for ((i=${BASH_REMATCH[1]}; i<=${BASH_REMATCH[2]}; i++)); do selections+=("$i"); done
+                elif [[ "$part" =~ ^[0-9]+$ ]]; then selections+=("$part")
+                else selections=(); break; fi
+            done
         fi
-
-        # 计算数组索引（从0开始）
-        local selected_index=$((selected_number - 1))
-
-        # 配置选中端口组的权重
-        local selected_port="${rule_ports[$selected_index]}"
-        local selected_name="${rule_names[$selected_index]}"
-        configure_port_group_weights "$selected_port" "$selected_name" "${port_groups[$selected_port]}" "${port_weights[$selected_port]}"
+        local valid=true
+        for n in "${selections[@]}"; do
+            if [ "$n" -lt 1 ] || [ "$n" -gt ${#rule_ports[@]} ]; then valid=false; fi
+        done
+        if [ "$valid" = false ] || [ "${#selections[@]}" -eq 0 ]; then
+            echo -e "${RED}无效选择，请输入如 1,3,5-12 或 all${NC}"; read -p "按回车键继续..."; continue
+        fi
+        if [ "${#selections[@]}" -eq 1 ]; then
+            local selected_index=$((${selections[0]} - 1))
+            configure_port_group_weights "${rule_ports[$selected_index]}" "${rule_names[$selected_index]}" "${port_groups[${rule_ports[$selected_index]}]}" "${port_weights[${rule_ports[$selected_index]}]}"
+        else
+            echo -e "${BLUE}已选择 ${#selections[@]} 个规则组。各组目标数量必须一致。${NC}"
+            read -p "请输入统一权重模板（例如 2,1）: " batch_weights
+            IFS=',' read -ra bw <<< "$batch_weights"
+            local batch_ok=true
+            for n in "${selections[@]}"; do
+                idx=$((n-1)); IFS=',' read -ra bt <<< "${port_groups[${rule_ports[$idx]}]}"
+                if ! validate_weight_input "$batch_weights" "${#bt[@]}"; then batch_ok=false; break; fi
+            done
+            if [ "$batch_ok" = true ]; then
+                echo -e "${GREEN}将为以下端口组应用权重 $batch_weights:${NC}"
+                for n in "${selections[@]}"; do idx=$((n-1)); echo "  ${rule_ports[$idx]}"; done
+                read -p "确认批量应用? [y/N]: " confirm
+                if [[ "$confirm" =~ ^[Yy]$ ]]; then
+                    for n in "${selections[@]}"; do idx=$((n-1)); apply_port_group_weight_config "${rule_ports[$idx]}" "$batch_weights" skip_restart; done
+                    service_restart && echo -e "${GREEN}✓ 批量权重配置已生效${NC}"
+                fi
+            fi
+        fi
     done
 }
 
@@ -2599,6 +2627,7 @@ apply_port_group_weight_config() {
 
     if [ $updated_count -gt 0 ]; then
         echo -e "${GREEN}✓ 已更新 $updated_count 个规则文件的权重配置${NC}"
+        if [ "$3" = "skip_restart" ]; then return 0; fi
         echo -e "${YELLOW}正在重启服务以应用更改...${NC}"
 
         if service_restart; then
