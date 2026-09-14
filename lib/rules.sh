@@ -2314,7 +2314,18 @@ weight_management_menu() {
                 rule_ports+=("$port_key")
                 rule_names+=("${port_configs[$port_key]}")
 
-                echo -e "${GREEN}$rule_number.${NC} ${port_configs[$port_key]} (端口: $port_key) [$balance_mode] - $target_count个目标服务器"
+                local balance_display="$balance_mode"
+                case "$balance_mode" in
+                    roundrobin) balance_display="轮询" ;;
+                    iphash) balance_display="IP 哈希" ;;
+                esac
+                echo -e "${GREEN}$rule_number.${NC} ${port_configs[$port_key]} (端口: $port_key) [${balance_display}] - $target_count个目标服务器"
+                IFS=',' read -ra detail_targets <<< "${port_groups[$port_key]}"
+                IFS=',' read -ra detail_weights <<< "${port_weights[$port_key]}"
+                for ((detail_i=0; detail_i<${#detail_targets[@]}; detail_i++)); do
+                    detail_weight="${detail_weights[$detail_i]:-1}"
+                    echo -e "    ${BLUE}$((detail_i+1)).${NC} ${detail_targets[$detail_i]} [当前权重: ${detail_weight}]"
+                done
             fi
         done
 
