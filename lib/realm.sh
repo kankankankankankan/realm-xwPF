@@ -317,6 +317,11 @@ install_realm() {
                 ;;
         esac
 
+        # 防止版本探测异常生成 releases/download// 的无效地址
+        if [[ ! "$LATEST_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo -e "${YELLOW}版本号探测异常，回退到内置版本 ${REALM_VERSION}${NC}"
+            LATEST_VERSION="$REALM_VERSION"
+        fi
         DOWNLOAD_URL="https://github.com/zhboner/realm/releases/download/${LATEST_VERSION}/realm-${ARCH}.tar.gz"
         echo -e "${BLUE}目标文件: realm-${ARCH}.tar.gz${NC}"
         local accel_download_url=$(github_accelerated_url "$DOWNLOAD_URL" 2>/dev/null || true)
