@@ -2198,6 +2198,10 @@ switch_balance_mode() {
                 ;;
         esac
 
+        echo -e "${GREEN}配置预览: 端口 $selected_port，模式 $current_balance_mode → $mode_display${NC}"
+        read -p "确认应用? [y/N]: " confirm_mode
+        [[ "$confirm_mode" =~ ^[Yy]$ ]] || { echo -e "${YELLOW}已取消${NC}"; read -p "按回车键继续..."; continue; }
+
         # 更新选定端口组下所有相关规则的负载均衡模式
         local updated_count=0
         for rule_file in "${RULES_DIR}"/rule-*.conf; do
