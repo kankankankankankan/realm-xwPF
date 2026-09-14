@@ -139,6 +139,12 @@ get_latest_realm_version() {
 
     latest_headers=$(curl -fsSLI --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$fetch_latest_url" 2>/dev/null || true)
     latest_version=$(echo "$latest_headers" | extract_realm_version)
+    # 某些镜像不返回 releases/tag 重定向头，改用最终 URL 提取版本
+    if [ -z "$latest_version" ]; then
+        local effective_url=""
+        effective_url=$(curl -fsSL -o /dev/null -w '%{url_effective}' --connect-timeout "$SHORT_CONNECT_TIMEOUT" --max-time "$SHORT_MAX_TIMEOUT" "$latest_url" 2>/dev/null || true)
+        latest_version=$(echo "$effective_url" | extract_realm_version)
+    fi
 
     if [ -z "$latest_version" ] && [ "$fetch_latest_url" != "$latest_url" ]; then
         latest_headers=$(curl -fsSLI --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT "$latest_url" 2>/dev/null || true)
