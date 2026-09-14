@@ -2371,6 +2371,11 @@ weight_management_menu() {
                 if ! validate_weight_input "$batch_weights" "${#bt[@]}"; then batch_ok=false; break; fi
             done
             if [ "$batch_ok" = true ]; then
+                echo -e "${GREEN}批量配置预览（权重越大，分配流量越多）:${NC}"
+                IFS=',' read -ra preview_weights <<< "$batch_weights"
+                total_weight=0; for w in "${preview_weights[@]}"; do total_weight=$((total_weight + w)); done
+                for n in "${selections[@]}"; do idx=$((n-1)); port_preview="${rule_ports[$idx]}"; echo -e "  ${BLUE}端口 $port_preview${NC}"; IFS=',' read -ra preview_targets <<< "${port_groups[$port_preview]}"; for ((j=0; j<${#preview_targets[@]}; j++)); do w="${preview_weights[$j]}"; pct=$(awk "BEGIN {printf \"%.1f\", $w * 100 / $total_weight}"); echo "    ${preview_targets[$j]}  权重 $w  (${pct}%)"; done; done
+                echo ""
                 echo -e "${GREEN}将为以下端口组应用权重 $batch_weights:${NC}"
                 for n in "${selections[@]}"; do idx=$((n-1)); echo "  ${rule_ports[$idx]}"; done
                 read -p "确认批量应用? [y/N]: " confirm
