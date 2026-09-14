@@ -948,6 +948,8 @@ smart_install() {
     if [ "${_SKIP_SCRIPT_UPDATE:-}" != "1" ]; then
         read -p "是否更新脚本？(y/N): " update_script
         if [[ "$update_script" =~ ^[Yy]$ ]]; then
+            # 菜单更新同样询问是否使用国内 GitHub 加速
+            _prompt_github_acceleration
             _bootstrap || return 1
             _load_libs || return 1
         fi
