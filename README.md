@@ -1,10 +1,10 @@
 # Realm 全功能一键网络转发管理,纯脚本快速搭建中转服务器
 
-[中文](README.md) | [English](README_EN.md) | [端口流量狗脚本介绍](port-traffic-dog-README.md)
+[中文](README.md) | [English](docs/README_EN.md) | [端口流量狗脚本介绍](docs/port-traffic-dog-README.md)
 
 ---
 
-> 🚀 **网络转发管理脚本** - 同步官方 Realm 最新版全部功能，网络链路测试，端口流量犬，保持极简本质,可视化规则操作提高效率，纯脚本构建网络转发服务
+> 🚀 **网络转发管理脚本** - 同步官方 Realm 最新版全部功能，网络链路测试，端口流量狗，保持极简本质,可视化规则操作提高效率，纯脚本构建网络转发服务
 
 ## 脚本界面预览
 
@@ -13,11 +13,11 @@
 
 ### xwPF.sh realm转发脚本
 
-![81ce7ea9e40068f6fda04b66ca3bd1ff.gif](https://i.mji.rip/2025/12/12/81ce7ea9e40068f6fda04b66ca3bd1ff.gif)
+![xwPF主脚本界面](docs/xwpf主脚本.gif)
 
-### 端口流量犬
+### 端口流量狗
 
-![cc59017896d277a8b35109ae44eac977.gif](https://i.mji.rip/2025/12/12/cc59017896d277a8b35109ae44eac977.gif)
+![端口流量狗界面](docs/流量狗.gif)
 
 ### 中转网络链路测试脚本
 ```
@@ -72,7 +72,7 @@ DTAG
  ⬇️ UDP下行 │ 10.0 Mbps (1.2 MB/s)      │ 0/26335 (0%)              │ 0.040 ms                 
 
 ─────────────────────────────────────────────────────────────────
-测试完成时间: 2025-08-28 20:12:29 | 脚本开源地址：https://github.com/kankankankankankan/realm-xwPF
+测试完成时间: 2025-08-28 20:12:29 | 脚本开源地址：https://github.com/zywe03/realm-xwPF
 ```
 
 </details>
@@ -82,15 +82,15 @@ DTAG
 ### 一键安装
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwPF.sh | sudo bash -s install
+wget -qO- https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install
 ```
 
 ### 网络受限使用加速源,一键安装
 
 ```bash
-wget -qO- https://github.palees.com/https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh | sudo bash -s install
+wget -qO- https://v6.gh-proxy.org/https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwPF.sh | sudo bash -s install
 ```
-安装开始时会询问是否启用国内 GitHub 加速下载，默认启用。脚本内部下载 GitHub 文件时会先尝试原地址，失败后自动使用加速源。需要更换加速源时可设置 `GITHUB_ACCELERATOR_URL` 环境变量。
+若加速源失效，可多次重试或更换其他具有内置加速功能的代理源
 
 ## 无法联网的离线安装
 
@@ -101,8 +101,8 @@ wget -qO- https://github.palees.com/https://github.com/kankankankankankan/realm-
 
 **1. 在有网络的设备上下载以下文件**
 
-- **主脚本**：[xwPF.sh](https://github.com/kankankankankankan/realm-xwPF/raw/main/xwPF.sh)
-- **模块文件**（全部需要）：https://github.com/kankankankankankan/realm-xwPF/tree/main/lib
+- **主脚本**：[xwPF.sh](https://github.com/zywe03/realm-xwPF/raw/main/xwPF.sh)
+- **模块文件**（全部需要）：https://github.com/zywe03/realm-xwPF/tree/main/lib
 
 - **Realm 程序**（根据系统架构选择）：
 
@@ -156,15 +156,17 @@ bash /usr/local/bin/xwPF.sh
   - 指定中转机的入口网卡,或指定某个出口网卡 (适用于多网卡情况)
   - 更多玩法参考[zhboner/realm](https://github.com/zhboner/realm)
 - **多发行版支持** - 适配 Debian/Ubuntu、Alpine、CentOS/RHEL 系列，自动识别包管理器与 init 系统（systemd / OpenRC）
+- **服务自愈** - systemd/OpenRC 双端服务异常自动重启，内置熔断防止连续崩溃刷屏
 - **快速体验** - 一键安装快速轻量上手体验网络转发
 - **智能检测** - 自动检测系统架构、端口冲突,连接可用性
 
+- **转发协议选择** - 每条规则可选纯TCP/纯UDP/双栈（both 默认）；纯UDP自动降级 standard 并跳过 ws/tls 选择（transport 挂的 TCP ConnectOpts 对纯UDP无效）；状态标签显示 [纯TCP]/[纯UDP]，both 不显标签
 - **搭建隧道** - 双端realm架构支持 TLS,ws,wss,搭建隧道
 - **负载均衡** - 支持轮询、IP哈希等策略，可配置权重分配
 - **故障转移** - 使用系统工具,完成自动故障检测,保持轻量化
 - **规则备注** - 清晰的备注功能,不再需要额外记忆
 
-- **端口流量犬** - 统计端口流量，控制端口限速，限流，可设置通知方式
+- **端口流量狗** - 统计端口与整机流量（整机默认开启），控制端口/整机限速，限流，可设置通知方式
 - **直观配置系统MPTCP** - 清晰的展示MPTCP界面
 - **网络链路脚本** - 测试链路延迟、带宽、稳定性,大包路由情况（基于hping3 & iperf3 & nexttrace & bgp.tools）
 
@@ -184,7 +186,7 @@ bash /usr/local/bin/xwPF.sh
 
 所以整个链路的加密协议由出口机业务软件决定
 
-![e3c0a9ebcee757b95663fc73adc4e880.png](https://i.mji.rip/2025/07/17/e3c0a9ebcee757b95663fc73adc4e880.png)
+![单端转发架构](docs/单端转发架构.png)
 
 </details>
 
@@ -197,7 +199,7 @@ bash /usr/local/bin/xwPF.sh
 
 #### 所以中转机realm选择的加密,伪装域名等等,必须与落地机一致,否则无法解密
 
-![4c1f0d860cd89ca79f4234dd23f81316.png](https://i.mji.rip/2025/07/17/4c1f0d860cd89ca79f4234dd23f81316.png)
+![双端隧道架构](docs/双端隧道架构.png)
 
 </details>
 
@@ -205,10 +207,10 @@ bash /usr/local/bin/xwPF.sh
 <summary><strong>负载均衡+故障转移</strong></summary>
 
 - 同一端口转发有多个落地机
-![a9f7c94e9995022557964011d35c3ad4.png](https://i.mji.rip/2025/07/15/a9f7c94e9995022557964011d35c3ad4.png)
+![负载均衡](docs/负载均衡.png)
 
 - 前置>多中转>单落地
-![2cbc533ade11a8bcbbe63720921e9e05.png](https://i.mji.rip/2025/07/17/2cbc533ade11a8bcbbe63720921e9e05.png)
+![前置多中转单落地](docs/前置多中转单落地.png)
 
 - `轮询`模式 (roundrobin)
 
@@ -351,14 +353,16 @@ IP地址：MPTCP协议需要知道可以使用哪些IP地址建立子流
     ├── realm-health-check.service       # 健康检查服务
     └── realm-health-check.timer         # 健康检查定时器
 
-端口流量犬（选择端口流量犬时下载）
-├── /usr/local/bin/port-traffic-dog.sh   # 端口流量犬脚本
+端口流量狗（选择端口流量狗时下载）
+├── /usr/local/bin/port-traffic-dog.sh   # 端口流量狗脚本
 ├── /usr/local/bin/dog                   # 快捷启动命令
 └── /etc/port-traffic-dog/
     ├── config.json                      # 流量监控配置文件
     ├── traffic_data.json                # 流量数据备份
+    ├── vps_traffic.json                 # 整机流量采集数据
     ├── notifications/                   # 通知模块目录
-    │   └── telegram.sh                  # Telegram通知模块
+    │   ├── telegram.sh                  # Telegram通知模块
+    │   └── webhook.sh                   # Webhook通知模块(企业微信/飞书/钉钉)
     └── logs/                            # 日志目录
 
 中转网络链路测试（选择链路测试时下载）
@@ -374,12 +378,16 @@ MPTCP（启用MPTCP时创建）
 ## 🤝 技术支持
 
 - **其他开源项目：** [https://github.com/zywe03](https://github.com/zywe03)
-- **介绍主页：** [https://zywe.de](https://zywe.de)
-- **问题反馈：** [GitHub Issues](https://github.com/kankankankankankan/realm-xwPF/issues)
-- **纯闲聊群** [tg交流群](https://t.me/zywe_chat) 
+- **了解更多：** [https://zywe.de](https://zywe.de)
+- **问题反馈：** [GitHub Issues](https://github.com/zywe03/realm-xwPF/issues)
+- **Linux.do** [https://linux.do/](https://linux.do/)
 
 ---
 
 **⭐ 如果这个项目对您有帮助，请给个 Star 支持一下！**
 
-[![Star History Chart](https://api.star-history.com/svg?repos=kankankankankankan/realm-xwPF&type=Date)](https://www.star-history.com/#kankankankankankan/realm-xwPF&Date)
+## 💖 如果对你有帮助
+
+<img src="docs/zywe_赞赏码.jpg" alt="zywe赞赏码" width="50%">
+
+[![Star History Chart](https://star-history.dera.page/svg?repos=zywe03/realm-xwPF&type=Date)](https://star-history.dera.page/#zywe03/realm-xwPF&Date)

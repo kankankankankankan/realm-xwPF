@@ -1,26 +1,47 @@
 
-# 每次更新OCR脚本
-download_realm_ocr_script() {
-    local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xw_realm_OCR.sh"
-    local target_path="/etc/realm/xw_realm_OCR.sh"
-    script_url="${script_url}?t=$(date +%s)"
-
-    echo -e "${GREEN}正在下载最新realm配置识别脚本...${NC}"
+# 子脚本按需更新：比对远端 SCRIPT_VERSION，本地已是最新则跳过下载。
+# 取不到远端版本(网络不通)时沿用本地文件，不阻断功能
+_update_sub_script() {
+    local script_url="$1"
+    local target_path="$2"
+    local display_name="$3"
 
     mkdir -p "$(dirname "$target_path")"
 
-    if [ -x "$target_path" ]; then
-        echo -e "${GREEN}✓ 使用本地realm配置识别脚本${NC}"
-        return 0
+    # 本地缺文件时直接下载，不做版本比对
+    if [ ! -f "$target_path" ]; then
+        echo -e "${GREEN}正在下载${display_name}...${NC}"
+        if download_from_sources "$script_url" "$target_path"; then
+            chmod +x "$target_path"
+            return 0
+        else
+            echo -e "${RED}请检查网络连接${NC}"
+            return 1
+        fi
     fi
 
-    if download_from_sources "$script_url" "$target_path"; then
-        chmod +x "$target_path"
-        return 0
-    else
-        echo -e "${RED}请检查网络连接${NC}"
-        return 1
+    local remote_ver=$(curl -sL --connect-timeout $SHORT_CONNECT_TIMEOUT --max-time $SHORT_MAX_TIMEOUT \
+        "$script_url" 2>/dev/null | \
+        grep -E '^SCRIPT_VERSION=' | head -1 | cut -d'"' -f2)
+    local local_ver=$(grep -E '^SCRIPT_VERSION=' "$target_path" 2>/dev/null | head -1 | cut -d'"' -f2)
+
+    if [ -n "$remote_ver" ] && [ "$remote_ver" != "$local_ver" ]; then
+        echo -e "${GREEN}发现${display_name}新版本: ${local_ver:-无} → ${remote_ver}，正在更新...${NC}"
+        if download_from_sources "$script_url" "$target_path"; then
+            chmod +x "$target_path"
+        else
+            echo -e "${RED}更新失败，使用现有版本${NC}"
+        fi
     fi
+    return 0
+}
+
+# 按需更新OCR脚本
+download_realm_ocr_script() {
+    local script_url="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xw_realm_OCR.sh"
+    local target_path="/etc/realm/xw_realm_OCR.sh"
+
+    _update_sub_script "$script_url" "$target_path" "realm配置识别脚本"
 }
 
 import_realm_config() {
@@ -44,13 +65,6 @@ rules_management_menu() {
         echo -e "${GREEN}=== 转发配置管理 ===${NC}"
         echo ""
 
-        local status=$(svc_status_text)
-        if [ "$status" = "active" ]; then
-            echo -e "服务状态: ${GREEN}●${NC} 运行中"
-        else
-            echo -e "服务状态: ${RED}●${NC} 已停止"
-        fi
-
         local enabled_count=0
         local disabled_count=0
         if [ -d "$RULES_DIR" ]; then
@@ -67,6 +81,17 @@ rules_management_menu() {
             done
         fi
 
+        # 服务状态：无规则且停止时提示先添加规则
+        local status=$(svc_status_text)
+        local total_count=$((enabled_count + disabled_count))
+        if [ "$status" = "active" ]; then
+            echo -e "服务状态: ${GREEN}●${NC} 运行中"
+        elif [ "$total_count" -eq 0 ]; then
+            echo -e "服务状态: ${RED}●${NC} 已停止（添加规则后启动）"
+        else
+            echo -e "服务状态: ${RED}●${NC} 已停止"
+        fi
+
         if [ "$enabled_count" -gt 0 ] || [ "$disabled_count" -gt 0 ]; then
             local total_count=$((enabled_count + disabled_count))
             echo -e "配置模式: ${GREEN}多规则模式${NC} (${GREEN}$enabled_count${NC} 启用 / ${YELLOW}$disabled_count${NC} 禁用 / 共 $total_count 个)"
@@ -74,7 +99,7 @@ rules_management_menu() {
             if [ "$enabled_count" -gt 0 ]; then
                 local has_relay_rules=false
                 local relay_count=0
-                for rule_file in "${RULES_DIR}"/rule-*.conf; do
+                for rule_file in $(get_sorted_rule_files); do
                     if [ -f "$rule_file" ]; then
                         if read_rule_file "$rule_file" && [ "$ENABLED" = "true" ] && [ "$RULE_ROLE" = "1" ]; then
                             if [ "$has_relay_rules" = false ]; then
@@ -100,7 +125,7 @@ rules_management_menu() {
 
                 local has_exit_rules=false
                 local exit_count=0
-                for rule_file in "${RULES_DIR}"/rule-*.conf; do
+                for rule_file in $(get_sorted_rule_files); do
                     if [ -f "$rule_file" ]; then
                         if read_rule_file "$rule_file" && [ "$ENABLED" = "true" ] && [ "$RULE_ROLE" = "2" ]; then
                             if [ "$has_exit_rules" = false ]; then
@@ -132,7 +157,7 @@ rules_management_menu() {
 
             if [ "$disabled_count" -gt 0 ]; then
                 echo -e "${YELLOW}禁用的规则:${NC}"
-                for rule_file in "${RULES_DIR}"/rule-*.conf; do
+                for rule_file in $(get_sorted_rule_files); do
                     if [ -f "$rule_file" ]; then
                         if read_rule_file "$rule_file" && [ "$ENABLED" = "false" ]; then
                             if [ "$RULE_ROLE" = "2" ]; then
@@ -453,14 +478,6 @@ show_brief_status() {
         return
     fi
 
-    # 正常状态显示
-    local status=$(svc_status_text)
-    if [ "$status" = "active" ]; then
-        echo -e "服务状态: ${GREEN}●${NC} 运行中"
-    else
-        echo -e "服务状态: ${RED}●${NC} 已停止"
-    fi
-
     # 检查是否有多规则配置
     local has_rules=false
     local enabled_count=0
@@ -480,6 +497,17 @@ show_brief_status() {
         done
     fi
 
+    # 服务状态：无规则且停止时提示先添加规则
+    local status=$(svc_status_text)
+    local total_count=$((enabled_count + disabled_count))
+    if [ "$status" = "active" ]; then
+        echo -e "服务状态: ${GREEN}●${NC} 运行中"
+    elif [ "$total_count" -eq 0 ]; then
+        echo -e "服务状态: ${RED}●${NC} 已停止（添加规则后启动）"
+    else
+        echo -e "服务状态: ${RED}●${NC} 已停止"
+    fi
+
     if [ "$has_rules" = true ] || [ "$disabled_count" -gt 0 ]; then
         # 多规则模式
         local total_count=$((enabled_count + disabled_count))
@@ -490,7 +518,7 @@ show_brief_status() {
             # 中转服务器规则
             local has_relay_rules=false
             local relay_count=0
-            for rule_file in "${RULES_DIR}"/rule-*.conf; do
+            for rule_file in $(get_sorted_rule_files); do
                 if [ -f "$rule_file" ]; then
                     if read_rule_file "$rule_file" && [ "$ENABLED" = "true" ] && [ "$RULE_ROLE" = "1" ]; then
                         if [ "$has_relay_rules" = false ]; then
@@ -519,7 +547,7 @@ show_brief_status() {
             # 服务端服务器规则
             local has_exit_rules=false
             local exit_count=0
-            for rule_file in "${RULES_DIR}"/rule-*.conf; do
+            for rule_file in $(get_sorted_rule_files); do
                 if [ -f "$rule_file" ]; then
                     if read_rule_file "$rule_file" && [ "$ENABLED" = "true" ] && [ "$RULE_ROLE" = "2" ]; then
                         if [ "$has_exit_rules" = false ]; then
@@ -554,7 +582,7 @@ show_brief_status() {
         # 显示禁用的规则（简要）
         if [ "$disabled_count" -gt 0 ]; then
             echo -e "${YELLOW}禁用的规则:${NC}"
-            for rule_file in "${RULES_DIR}"/rule-*.conf; do
+            for rule_file in $(get_sorted_rule_files); do
                 if [ -f "$rule_file" ]; then
                     if read_rule_file "$rule_file" && [ "$ENABLED" = "false" ]; then
                         # 根据规则角色使用不同的字段
@@ -621,52 +649,20 @@ get_gmt8_time() {
     TZ='GMT-8' date "$@"
 }
 
-# 下载故障转移管理脚本
+# 按需更新故障转移管理脚本：比对远端版本，本地已是最新则跳过下载
 download_failover_script() {
-    local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwFailover.sh"
+    local script_url="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwFailover.sh"
     local target_path="/etc/realm/xwFailover.sh"
-    script_url="${script_url}?t=$(date +%s)"
 
-    echo -e "${GREEN}正在下载最新故障转移脚本...${NC}"
-
-    mkdir -p "$(dirname "$target_path")"
-
-    if [ -x "$target_path" ]; then
-        echo -e "${GREEN}✓ 使用本地故障转移脚本${NC}"
-        return 0
-    fi
-
-    if download_from_sources "$script_url" "$target_path"; then
-        chmod +x "$target_path"
-        return 0
-    else
-        echo -e "${RED}请检查网络连接${NC}"
-        return 1
-    fi
+    _update_sub_script "$script_url" "$target_path" "故障转移脚本"
 }
 
-# 下载中转网络链路测试脚本
+# 按需更新中转网络链路测试脚本：比对远端版本，本地已是最新则跳过下载
 download_speedtest_script() {
-    local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/speedtest.sh"
+    local script_url="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/speedtest.sh"
     local target_path="/etc/realm/speedtest.sh"
-    script_url="${script_url}?t=$(date +%s)"
 
-    echo -e "${GREEN}正在下载最新测速脚本...${NC}"
-
-    mkdir -p "$(dirname "$target_path")"
-
-    if [ -x "$target_path" ]; then
-        echo -e "${GREEN}✓ 使用本地测速脚本${NC}"
-        return 0
-    fi
-
-    if download_from_sources "$script_url" "$target_path"; then
-        chmod +x "$target_path"
-        return 0
-    else
-        echo -e "${RED}请检查网络连接${NC}"
-        return 1
-    fi
+    _update_sub_script "$script_url" "$target_path" "测速脚本"
 }
 # 中转网络链路测试菜单
 speedtest_menu() {
@@ -702,9 +698,8 @@ failover_management_menu() {
 
 # 端口流量狗
 port_traffic_dog_menu() {
-    local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/port-traffic-dog.sh"
+    local script_url="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/port-traffic-dog.sh"
     local dog_script="/usr/local/bin/port-traffic-dog.sh"
-    script_url="${script_url}?t=$(date +%s)"
 
     # 脚本不存在或不可执行时才下载
     if [[ ! -f "$dog_script" || ! -x "$dog_script" ]]; then
@@ -729,7 +724,7 @@ show_menu() {
     while true; do
         clear
         echo -e "${GREEN}=== xwPF Realm全功能一键脚本 $SCRIPT_VERSION ===${NC}"
-        echo -e "${GREEN}介绍主页:${NC}https://zywe.de | ${GREEN}项目开源:${NC}https://github.com/kankankankankankan/realm-xwPF"
+        echo -e "${GREEN}了解更多:${NC}https://zywe.de | ${GREEN}项目开源:${NC}https://github.com/zywe03/realm-xwPF"
         echo -e "${GREEN}一个开箱即用、轻量可靠、灵活可控的 Realm 转发管理工具${NC}"
         echo -e "${GREEN}官方realm的全部功能+故障转移 | 快捷命令: pf${NC}"
 
