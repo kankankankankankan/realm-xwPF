@@ -340,6 +340,10 @@ uninstall_realm_stage_one() {
     svc_is_active && svc_stop
     [ "$(svc_enabled_text)" = "enabled" ] && svc_disable
     # 停止健康检查服务（通过xwFailover.sh）
+    if [ -f "/usr/local/bin/xwFailover.sh" ]; then
+        bash "/usr/local/bin/xwFailover.sh" stop >/dev/null 2>&1
+    fi
+    # 兼容旧版路径
     if [ -f "/etc/realm/xwFailover.sh" ]; then
         bash "/etc/realm/xwFailover.sh" stop >/dev/null 2>&1
     fi
@@ -651,8 +655,8 @@ get_gmt8_time() {
 
 # 按需更新故障转移管理脚本：比对远端版本，本地已是最新则跳过下载
 download_failover_script() {
-    local script_url="https://raw.githubusercontent.com/zywe03/realm-xwPF/main/xwFailover.sh"
-    local target_path="/etc/realm/xwFailover.sh"
+    local script_url="https://raw.githubusercontent.com/kankankankankankan/realm-xwPF/main/xwFailover.sh"
+    local target_path="/usr/local/bin/xwFailover.sh"
 
     _update_sub_script "$script_url" "$target_path" "故障转移脚本"
 }
@@ -684,7 +688,7 @@ speedtest_menu() {
 
 # 故障转移管理菜单
 failover_management_menu() {
-    local failover_script="/etc/realm/xwFailover.sh"
+    local failover_script="/usr/local/bin/xwFailover.sh"
 
     if ! download_failover_script; then
         echo -e "${RED}无法下载故障转移脚本，功能暂时不可用${NC}"

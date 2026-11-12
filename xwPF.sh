@@ -18,7 +18,7 @@ LIB_FILES=("core.sh" "rules.sh" "server.sh" "realm.sh" "ui.sh")
 
 # 按需功能脚本（安装时预下载）
 AUX_FILES=(
-    "xwFailover.sh:/etc/realm/xwFailover.sh"
+    "xwFailover.sh:/usr/local/bin/xwFailover.sh"
     "speedtest.sh:/etc/realm/speedtest.sh"
     "xw_realm_OCR.sh:/etc/realm/xw_realm_OCR.sh"
     "port-traffic-dog.sh:/usr/local/bin/port-traffic-dog.sh"
@@ -240,6 +240,11 @@ case "${1:-}" in
         _bootstrap || exit 1
         _load_libs || exit 1
         _SKIP_SCRIPT_UPDATE=1 smart_install
+        ;;
+    --restart-service|--generate-config-only)
+        # 供健康检查等无 TTY 环境（如 systemd）调用，跳过交互终端检查
+        _load_libs || exit 1
+        main "$@"
         ;;
     *)
         _require_interactive_tty || exit 1
